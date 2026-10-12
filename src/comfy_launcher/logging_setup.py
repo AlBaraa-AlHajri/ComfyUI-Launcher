@@ -9,6 +9,15 @@ from pathlib import Path
 from .paths import app_data
 
 
+class ServerRotatingHandler(RotatingFileHandler):
+    """Apply the ten-file total retention limit during long-running server sessions too."""
+
+    def doRollover(self) -> None:
+        # Count all days together after rotating. / احتساب جميع الأيام بعد تدوير السجل.
+        super().doRollover()
+        prune_server_logs()
+
+
 def logs_dir() -> Path:
     """Create and return the writable log directory."""
     path = app_data() / "logs"
@@ -35,7 +44,7 @@ def server_log() -> tuple[logging.Logger, Path]:
     for old in logger.handlers[:]:
         old.close()
         logger.removeHandler(old)
-    handler = RotatingFileHandler(path, maxBytes=5_000_000, backupCount=9, encoding="utf-8")
+    handler = ServerRotatingHandler(path, maxBytes=5_000_000, backupCount=9, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(message)s"))
     logger.addHandler(handler)
     prune_server_logs()
